@@ -13,5 +13,5 @@ console.log(BMImark)
 let BMIjohn = johnweight/(johnheight*johnheight);
 console.log(BMIjohn)
 
-const markHigherBMI = BMImark>BMIjohn? `Mark\'s BMI (${BMImark}) is Higher than John\'s (${BMIjohn})`: `John\'s BMI (${BMIjohn}) is Higher than mark\'s (${BMImark})!`;
+const markHigherBMI = BMImark>BMIjohn? `Mark\'s BMI (${BMImark}) is Higher than John\'s (${BMIjohn})!`: `John\'s BMI (${BMIjohn}) is Higher than mark\'s (${BMImark})!`;
 console.log(markHigherBMI)
