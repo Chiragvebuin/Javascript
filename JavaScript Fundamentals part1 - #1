@@ -1,3 +1,6 @@
+/* JavaScript Fundamentals – Part 1
+Coding Challenge #1 & #2 */
+
 var markweight = prompt("Mark Weight");
 let markheight = prompt("Mark Height");
 
@@ -10,5 +13,5 @@ console.log(BMImark)
 let BMIjohn = johnweight/(johnheight*johnheight);
 console.log(BMIjohn)
 
-const markHigherBMI = BMImark>BMIjohn? 'Yes, Mark has a higher BMI then John': 'No, John has a higher BMI then Mark';
+const markHigherBMI = BMImark>BMIjohn? `Mark\'s BMI (${BMImark}) is Higher than John\'s (${BMIjohn})`: `John\'s BMI (${BMIjohn}) is Higher than mark\'s (${BMImark})!`;
 console.log(markHigherBMI)
