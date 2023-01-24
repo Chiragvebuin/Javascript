@@ -1,10 +1,11 @@
 //JavaScript Fundamentals – Part 1
 
 //Coding Challenge #1 & #2
-var markweight = prompt("Mark Weight");
-let markheight = prompt("Mark Height");
-let johnweight = prompt("John Weight");
-let johnheight = prompt("John Height");
+const prompt = require("prompt-sync")();
+var markweight = prompt("Mark Weight: ");
+let markheight = prompt("Mark Height: ");
+let johnweight = prompt("John Weight: ");
+let johnheight = prompt("John Height: ");
 let BMImark = markweight/markheight**2;
 console.log(BMImark)
 let BMIjohn = johnweight/(johnheight*johnheight);
