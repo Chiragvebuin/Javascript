@@ -1,12 +1,17 @@
-import express from 'express';
-import chalk from 'chalk';
+const express = require('express');
+const debug = require('debug')('app');
+const morgan = require('morgan');
+const path = require('path');
+
 const app = express();
 
+app.use(morgan('tiny'));
+app.use(express.static(path.join(__dirname, '/public/')));
 
 app.get('/',(req, res) => {
     res.send('Hello from my App');
 });
 
 app.listen(3000, () => {
-    console.log('Listening on port 3000' + chalk.italic.yellowBright(' --INITALIZING'));
+    debug('Listening on port 3000');
 });
