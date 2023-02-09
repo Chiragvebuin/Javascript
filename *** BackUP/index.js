@@ -1,51 +1,64 @@
-import {connection} from './connection.js';
-import express from 'express';
+import { connection } from "./connection.js";
+import express from "express";
+import bodyParser from "body-parser";
 
 const app = express();
+app.use(bodyParser.json());
 const port = 4000;
 
-app.get('/', function(req, res) {
-  const query = "SELECT * From user";
-  connection.query(query, function(err, rows, fields) {
-    if (err) {
-      console.log("An error occurred with the query");
-      return;
-    }
-    res.send(rows);
-  });
+app.get("/users", async (req, res) => {
+try {
+const query = "SELECT * From user";
+const [rows] = await connection.query(query);
+res.send(rows);
+} catch (err) {
+console.log("An error occured with the query");
+}
 });
 
-app.post('/', function(req, res) {
-  const query = "INSERT INTO user SET ?";
-  connection.query(query, req.body, function(err, result) {
-    if (err) {
-      console.log("An error occurred with the query");
-      return;
-    }
-    res.send(result);
-  });
+app.get("/users/:userid", async (req, res) => {
+try {
+const query = "SELECT * FROM user WHERE userid=?";
+const [rows] = await connection.query(query, [req.params.userid]);
+res.send(rows);
+} catch (err) {
+console.log("An error occured with the query");
+}
 });
 
-app.put('/:id', function(req, res) {
-  const query = "UPDATE user SET ? WHERE id = ?";
-  connection.query(query, [req.body, req.params.id], function(err, result) {
-    if (err) {
-      console.log("An error occurred with the query");
-      return;
-    }
-    res.send(result);
-  });
+app.patch("/users/:userid", async (req, res) => {
+try {
+const query = "UPDATE user SET ? WHERE userid=?";
+const [rows] = await connection.query(query, [req.body, req.params.userid]);
+res.send(rows);
+} catch (err) {
+console.log("An error occured with the query");
+res.send(err);
+}
 });
 
-app.delete('/:id', function(req, res) {
-  const query = "DELETE FROM user WHERE id = ?";
-  connection.query(query, [req.params.id], function(err, result) {
-    if (err) {
-      console.log("An error occurred with the query");
-      return;
-    }
-    res.send(result);
-  });
+app.post("/users", async (req, res) => {
+try {
+const userData = [req.body.name, req.body.emailid, req.body.password];
+const query = "INSERT INTO user (name, emailid, password) VALUES (?)";
+await connection.query(query, [userData]);
+res.send("Created Successfully");
+} catch (err) {
+console.log("An error occured with the query");
+res.send(err);
+}
 });
 
-app.listen(port, () => console.log(`Example app listening on port ${port}!`));
+app.delete("/users/:userid", async (req, res) => {
+try {
+const query = "DELETE FROM user WHERE userid=?";
+const [rows] = await connection.query(query, [req.params.userid]);
+res.send(rows);
+} catch (err) {
+console.log("An error occured with the query");
+}
+});
+
+app.listen(port, () =>
+console.log(Example app listening on port ${port}!)
+);
