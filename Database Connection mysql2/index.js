@@ -38,7 +38,18 @@ app.patch('/users/:userid', (req, res) => {
       res.send(rows);
     });
 })
-  
+
+app.put('/users/:userid', (req, res) => {
+    const query = "UPDATE user SET ? WHERE userid=?";
+    connection.query(query, [req.body, req.params.userid], (err, rows) => {
+      if (err) {
+        console.log("An error occured with the query");
+        res.send(err)
+      }
+      res.send("Updated Successfully");
+    });
+})
+
 app.post('/users', (req, res) => {
     const userData = [req.body.name, req.body.emailid, req.body.password]
     const query = "INSERT INTO user (name, emailid, password) VALUES (?)";
@@ -49,8 +60,7 @@ app.post('/users', (req, res) => {
       }
       res.send("Created Successfully");
     });
-})
-  
+}) 
 
 app.delete('/users/:userid', (req, res) => {
   const query = "DELETE FROM user WHERE userid=?";
@@ -62,7 +72,5 @@ app.delete('/users/:userid', (req, res) => {
     res.send(rows);
   });
 })
-
-
 
 app.listen(port, () => console.log(`Example app listening on port ${port}!`))

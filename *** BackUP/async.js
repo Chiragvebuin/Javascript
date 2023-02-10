@@ -32,6 +32,29 @@ app.get('/users/:userid', async (req, res) => {
   }
 });
 
+app.put('/users/:userid', async (req, res) => {
+  try {
+    const userid = req.params.userid;
+    const { name, emailid, password } = req.body;
+    
+    // Validate
+    if (!userid || !name || !emailid || !password) {
+      return res.status(400).send({ error: "Bad request. All fields are required." });
+    }
+
+    // Update user in the database
+    const query = "UPDATE user SET name = ?, emailid = ?, password = ? WHERE userid = ?";
+    const result = await connection.query(query, [name, emailid, password, userid]);
+    
+    // Send success response
+    return res.send({ message: "User updated successfully.", result });
+  } catch (error) {
+    console.error(error);
+    return res.status(500).send({ error: "Internal server error." });
+  }
+});
+
+
 app.patch('/users/:userid', async (req, res) => {
   try {
     const userId = req.params.userid;
@@ -67,3 +90,19 @@ app.post('/users', async (req, res) => {
 });
 
 app.delete('/users/:userid', async (req, res) => {
+  const { userid } = req.params;
+  if (!userid) {
+    return res.status(400).send({ error: 'User ID is required' });
+  }
+
+  try {
+    const query = "DELETE FROM user WHERE userid=?";
+    const results = await connection.query(query, [userid]);
+    res.send({ message: 'User deleted successfully', results });
+  } catch (error) {
+    console.log("An error occured with the query");
+    res.status(500).send({ error: 'Failed to delete user' });
+  }
+});
+
+app.listen(port, () => console.log(`Example app listening on port ${port}!`));
