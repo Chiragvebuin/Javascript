@@ -157,7 +157,7 @@ app.get("/users/:userid", checkToken, async (req, res) => {
   }
 });
 
-app.put("/users/:userid", async (req, res) => {
+app.put("/users/:userid", checkToken,async (req, res) => {
   try {
     const userid = req.params.userid;
     const { name, emailid, password } = req.body;
