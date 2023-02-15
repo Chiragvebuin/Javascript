@@ -3,13 +3,80 @@ import express from "express";
 import bodyParser from "body-parser";
 import Joi from "joi";
 import { connection } from "./connection.js";
-import dotenv from "dotenv";
 import jwt from "jsonwebtoken";
+import { checkToken } from "./verifyToken.js";
 
 const secretKey = "secretkey";
 const app = express();
 app.use(bodyParser.json());
 const port = 4000;
+
+app.post("/login", async (req, res) => {
+  // Our login logic starts here
+  try {
+    // Get user input
+    const { emailid, password } = req.body;
+
+    // Validate user input
+    if (!(emailid && password)) {
+      res.status(400).send("All input is required");
+    }
+    const userQuery = "SELECT * from user WHERE emailid=?";
+    const row = await connection.promise().query(userQuery, req.body.emailid);
+    if (row[0]?.length) {
+      row[0].forEach(async (element) => {
+        if (
+          element.emailid === req.body.emailid &&
+          element.password === req.body.password
+        ) {
+          const accessQuery = "SELECT * from access WHERE userid=?";
+          const result = await connection
+            .promise()
+            .query(accessQuery, element.userid);
+
+          const token = jwt.sign(
+            { userid: element.userid, emailid },
+            secretKey,
+            {
+              expiresIn: "2h",
+            }
+          );
+          if (result[0]?.length) {
+            const userData = {
+              is_login: 1,
+              token: token,
+            };
+            const updateQuery = `UPDATE access SET ? WHERE userid=${element.userid}`;
+            await connection.promise().query(updateQuery, [userData]);
+          } else {
+            const insertQuery =
+              "INSERT INTO access(userid,token,is_login) values(?,?,?)";
+            await connection
+              .promise()
+              .query(insertQuery, [element.userid, token, 1], element.userid);
+          }
+          res.send({
+            message: "Login Successfully",
+            token: token,
+          });
+        } else {
+          res.send("Please enter correct emailid or password");
+        }
+      });
+    } else {
+      res.send("Please enter correct emailid");
+    }
+  } catch (err) {
+    console.log(err);
+  }
+});
+
+// Joi schema for user data validation
+const userSchema = Joi.object({
+  name: Joi.string().required(),
+  emailid: Joi.string().email().required(),
+  password: Joi.string().required(),
+});
 
 app.post("/users", async (req, res) => {
   try {
@@ -44,67 +111,6 @@ app.post("/users", async (req, res) => {
   }
 });
 
-app.post("/login", async (req, res) => {
-  // Our login logic starts here
-  try {
-    // Get user input
-    const { emailid, password } = req.body;
-
-    // Validate user input
-    if (!(emailid && password)) {
-      res.status(400).send("All input is required");
-    }
-    const userQuery = "SELECT * from user WHERE emailid=?";
-    const row = await connection.promise().query(userQuery, req.body.emailid);
-    if(row[0]?.length){
-      row[0].forEach(async (element) => {
-        if (
-          element.emailid === req.body.emailid &&
-          element.password === req.body.password
-        ) {
-          const accessQuery = "SELECT * from access WHERE userid=?";
-          const result = await connection
-          .promise()
-          .query(accessQuery, element.userid);
-          
-          const token = jwt.sign({ userid: element.userid, emailid }, secretKey, {
-            expiresIn: "2h",
-          });
-          if (result[0]?.length) {
-            const userData = {
-              is_login: 1,
-              token: token
-            }
-            const updateQuery = `UPDATE access SET ? WHERE userid=${element.userid}`;
-             await connection.promise().query(updateQuery, [userData]);   
-  
-          } else {
-            const insertQuery = "INSERT INTO access(userid,token,is_login) values(?,?,?)";
-            await connection.promise().query(insertQuery, [element.userid,token,1],element.userid);
-          }
-          res.send({
-            message: "Login Successfully",
-            token: token
-          })
-        }else{
-          res.send("Please enter correct emailid or password")
-        }
-      });
-    }else{
-      res.send("Please enter correct emailid")
-    }
-  } catch (err) {
-    console.log(err);
-  }
-});
-
-// Joi schema for user data validation
-const userSchema = Joi.object({
-  name: Joi.string().required(),
-  emailid: Joi.string().email().required(),
-  password: Joi.string().required(),
-});
-
 app.get("/users", async (req, res) => {
   try {
     const query = "SELECT * From user";
@@ -116,17 +122,17 @@ app.get("/users", async (req, res) => {
   }
 });
 
-app.get("/users/:userid", async (req, res) => {
+app.get("/users/:userid", checkToken, async (req, res) => {
   try {
     const userid = req.params.userid;
     const accessQuery = "SELECT * FROM access WHERE userid=?";
     const accessResult = await connection.promise().query(accessQuery, userid);
-    if(accessResult[0]?.length){
-      accessResult[0].forEach(async(element)=>{
+    if (accessResult[0]?.length) {
+      accessResult[0].forEach(async (element) => {
         if (!userid) {
           res.status(400).send({ message: "userid is required" });
         }
-        if(req.headers.token===element.token){
+        if (req.headers.token === element.token) {
           const getQuery = "SELECT * From user";
           const [rows] = await connection.promise().query(getQuery);
           const finalResult = rows.filter(
@@ -140,13 +146,11 @@ app.get("/users/:userid", async (req, res) => {
           } else {
             return res.send({ message: "User Not Found" });
           }
-        }else{
-          res.send("Invalid Token")
+        } else {
+          res.send("Invalid Token");
         }
-      })
-
+      });
     }
-
   } catch (err) {
     console.log("An error occured with the query");
     res.status(500).send({ message: "An error occured with the query" });
@@ -163,22 +167,36 @@ app.put("/users/:userid", async (req, res) => {
     if (error) {
       return res.status(400).send({ error: error.details[0].message });
     }
-    const getQuery = "SELECT * From user";
-    const [rows] = await connection.promise().query(getQuery);
-    const finalResult = rows.filter(
-      (element) => element.userid === Number(req.params.userid)
-    );
-    if (finalResult?.length) {
-      // Update user in the database
-      const query = `UPDATE user SET ? WHERE userid=?`;
-      const result = await connection
-        .promise()
-        .query(query, [req.body, req.params.userid]);
 
-      // Send success response
-      return res.send({ message: "User updated successfully.", result });
+    const checkEmailQuery = "SELECT * FROM user WHERE emailid=?";
+    const checkEmailResult = await connection
+      .promise()
+      .query(checkEmailQuery, emailid);
+    const existingUser = checkEmailResult[0][0];
+
+    if (existingUser && existingUser.userid !== Number(userid)) {
+      return res
+        .status(409)
+        .send({ error: "Email address is already in use." });
+    }
+
+    const getQuery = "SELECT * FROM user WHERE userid=?";
+    const getResult = await connection.promise().query(getQuery, userid);
+    const user = getResult[0][0];
+
+    if (user) {
+      const updateQuery =
+        "UPDATE user SET name=?, emailid=?, password=? WHERE userid=?";
+      const updateResult = await connection
+        .promise()
+        .query(updateQuery, [name, emailid, password, userid]);
+
+      return res.send({
+        message: "User updated successfully.",
+        result: updateResult,
+      });
     } else {
-      return res.send({ message: "User Not Found" });
+      return res.status(404).send({ error: "User not found." });
     }
   } catch (error) {
     console.error(error);
@@ -223,8 +241,6 @@ app.patch("/users/:userid", async (req, res) => {
   }
 });
 
-
-
 app.delete("/users/:userid", async (req, res) => {
   try {
     const userId = req.params.userid;
@@ -251,7 +267,6 @@ app.delete("/users/:userid", async (req, res) => {
   }
 });
 
-
 app.listen(port, () => {
-  console.log(`Example app listening at http://localhost:${port}`);
+  console.log(`This App is accessible on => http://localhost:${port}`);
 });
